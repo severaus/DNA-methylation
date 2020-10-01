@@ -1,0 +1,25 @@
+source("https://bioconductor.org/biocLite.R")
+biocLite("limma")
+biocLite("statmod")
+library("limma")
+setwd("C:\\Users\\d\\Desktop\\twin_data")
+targets<-readTargets("targets.txt")
+RG<-read.maimages(targets$FileName,columns=list(R="F635_Mean",G="F532_Mean",Rb="B635_Median",Gb="B532_Median"))
+Annotation<-read.delim("GPL18700-25562.txt")
+RG$genes<-Annotation[,c(2,4)]
+colnames(RG$genes)<-c("RikenID","GenBank")
+spottypes<-readSpotTypes("spottypes.txt")
+RG$genes$Status<-controlStatus(spottypes,RG)
+plotMD(RG,column=2)
+RG<-backgroundCorrect(RG, method="minimum")
+MA<-normalizeWithinArrays(RG,method="loess")
+MA2<-normalizeBetweenArrays(MA, method="quantile")
+regular<-MA2$genes$Status=="Riken"
+MA3<-MA[regular,]
+MA3$genes$Status<-NULL
+design<-c(1,-1)
+fit<-lmFit(MA3,design)
+fit<-eBayes(fit)
+twin4<-topTable(fit,number=400000,p.value=0.30,adjust="BH")
+volcanoplot(fit)
+write.table(cvsd1,"cvsd1.txt")
